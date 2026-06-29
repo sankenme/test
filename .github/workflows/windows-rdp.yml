@@ -9,37 +9,37 @@ jobs:
       - name: Enable RDP and expose port
         shell: powershell
         run: |
-
+          # 1. 启用远程桌面
           Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -Name "fDenyTSConnections" -Value 0
           Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
 
-
+          # 2. 设置 runneradmin 密码
           Write-Host "Setting password for runneradmin..."
           net user runneradmin ${{ secrets.RDP_PASSWORD }}
-
           net localgroup "Remote Desktop Users" runneradmin /add
 
-
+          # 3. 下载 bore
           Write-Host "Downloading bore..."
           Invoke-WebRequest -Uri "https://github.com/ekzhang/bore/releases/download/v0.5.1/bore-v0.5.1-x86_64-pc-windows-msvc.zip" -OutFile "$env:TEMP\bore.zip"
           Expand-Archive -Path "$env:TEMP\bore.zip" -DestinationPath "$env:TEMP\bore"
 
-
+          # 4. 暴露 3389 到公网
           Write-Host "Exposing RDP port to public..."
           $process = Start-Process -FilePath "$env:TEMP\bore\bore.exe" -ArgumentList "local 3389 --to bore.pub" -NoNewWindow -PassThru -RedirectStandardOutput "$env:TEMP\bore_output.txt"
           Start-Sleep -Seconds 10
 
-
+          # 5. 提取公网地址（直接匹配 bore.pub:端口）
           $boreOutput = Get-Content "$env:TEMP\bore_output.txt" -Raw
+          $address = [regex]::Match($boreOutput, 'bore\.pub:\d+').Value
           Write-Host "=============================================="
           Write-Host "      RDP Connection Info"
           Write-Host "=============================================="
-          Write-Host "Address:  $($boreOutput -replace '.*listening on ', '')"
+          Write-Host "Address:  $address"
           Write-Host "Username: runneradmin"
           Write-Host "Password: (the one you set in RDP_PASSWORD secret)"
           Write-Host "=============================================="
 
-
+          # 6. 保持运行
           Write-Host "Do not close this window while connected, or RDP will drop."
           Write-Host "Press Ctrl+C to cancel the workflow."
           $process.WaitForExit()
