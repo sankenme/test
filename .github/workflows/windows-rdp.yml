@@ -1,0 +1,13 @@
+name: Windows 远程桌面
+
+on: workflow_dispatch   # 手动触发
+
+jobs:
+  windows-rdp:
+    runs-on: windows-latest   # 使用最新的 Windows Server 环境
+    steps:
+      - name: 启用远程桌面并暴露到公网
+        uses: luchihoratiu/debug-via-rdp@v1
+        with:
+          password: ${{ secrets.RDP_PASSWORD }}   # 使用你刚创建的 secret
+          timeout: 3600   # 作业最长运行时间（秒），可选，默认 3600
