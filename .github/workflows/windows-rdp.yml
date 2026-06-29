@@ -1,4 +1,4 @@
-name: Windows 远程桌面（自建）
+name: Windows RDP (Self-hosted)
 
 on: workflow_dispatch
 
@@ -6,38 +6,38 @@ jobs:
   windows-rdp:
     runs-on: windows-latest
     steps:
-      - name: 开启远程桌面并暴露端口
+      - name: Enable RDP and expose port
         shell: powershell
         run: |
-          # 1. 启用远程桌面
+          # 1. Enable Remote Desktop
           Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -Name "fDenyTSConnections" -Value 0
           Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
 
-          # 2. 设置 Administrator 密码（从仓库 Secret 读取）
+          # 2. Set Administrator password (read from Secret)
           $password = ConvertTo-SecureString "${{ secrets.RDP_PASSWORD }}" -AsPlainText -Force
           Set-LocalUser -Name "Administrator" -Password $password
 
-          # 3. 下载 bore（轻量级内网穿透工具，单文件即可用）
-          Write-Host "下载 bore..."
+          # 3. Download bore
+          Write-Host "Downloading bore..."
           Invoke-WebRequest -Uri "https://github.com/ekzhang/bore/releases/download/v0.5.1/bore-v0.5.1-x86_64-pc-windows-msvc.zip" -OutFile "$env:TEMP\bore.zip"
           Expand-Archive -Path "$env:TEMP\bore.zip" -DestinationPath "$env:TEMP\bore"
 
-          # 4. 启动 bore，将本地 3389 端口暴露到公网
-          Write-Host "正在暴露远程桌面端口到公网..."
+          # 4. Expose local port 3389 via bore
+          Write-Host "Exposing RDP port to public..."
           $process = Start-Process -FilePath "$env:TEMP\bore\bore.exe" -ArgumentList "local 3389 --to bore.pub" -NoNewWindow -PassThru -RedirectStandardOutput "$env:TEMP\bore_output.txt"
-          Start-Sleep -Seconds 10   # 等待隧道建立
+          Start-Sleep -Seconds 10
 
-          # 5. 读取公网地址
+          # 5. Read public address
           $boreOutput = Get-Content "$env:TEMP\bore_output.txt" -Raw
           Write-Host "=============================================="
-          Write-Host "      远程桌面连接信息"
+          Write-Host "      RDP Connection Info"
           Write-Host "=============================================="
-          Write-Host "地址:  $($boreOutput -replace '.*listening on ', '')"
-          Write-Host "用户名: Administrator"
-          Write-Host "密码:   (你设置的 RDP_PASSWORD)"
+          Write-Host "Address:  $($boreOutput -replace '.*listening on ', '')"
+          Write-Host "Username: Administrator"
+          Write-Host "Password: (the one you set in RDP_PASSWORD secret)"
           Write-Host "=============================================="
 
-          # 6. 让作业保持运行，直到你手动取消
-          Write-Host "连接成功后，请勿关闭此窗口，否则远程桌面会断开。"
-          Write-Host "按 Ctrl+C 可手动取消工作流。"
+          # 6. Keep session alive until cancelled
+          Write-Host "Do not close this window while connected, or RDP will drop."
+          Write-Host "Press Ctrl+C to cancel the workflow."
           $process.WaitForExit()
