@@ -8,4 +8,4 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: 启动 SSH 调试会话
-        uses: P3TERX/ssh2actions@master
+        uses: P3TERX/ssh2actions@main
