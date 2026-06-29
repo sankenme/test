@@ -1,0 +1,11 @@
+name: 手动启动 Ubuntu SSH
+
+on:
+  workflow_dispatch:
+
+jobs:
+  ubuntu-ssh:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 启动 SSH 调试会话
+        uses: P3TERX/debugger-action@master
